@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace Domain.Entities
     {
         public int ImportId { get; set; }
         public decimal TotalPayment { get; set; }
-        public string Status { get; set; }
+        public ImportStatusEnum Status { get; set; }
         public int SupplierId { get; set; }
         public ICollection<ImportItem> ImportItems { get; set; }
     }
