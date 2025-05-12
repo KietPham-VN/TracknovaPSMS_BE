@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace Domain.Enums
 {
-    internal class UserRole
+    public enum UserRole
     {
+        Admin,
+        User,
+        Manager
     }
+
 }

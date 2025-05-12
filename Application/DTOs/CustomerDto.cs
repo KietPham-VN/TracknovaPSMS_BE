@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Domain.Enums;
 
-namespace Domain.Entities
+namespace Application.DTOs
 {
-    public class Customer
+    public class CustomerDto
     {
-        public int customerId { get; set; }
+        public int CustomerId{ get; set; }
         public string UserName { get; set; }
         public string FullName { get; set; }
         public string Password { get; set; }
