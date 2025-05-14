@@ -35,9 +35,6 @@ public partial class TracknovaContext : DbContext, IApplicationDbContext
 
     public DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseMySql("server=localhost;database=Tracknova_PSMS_DB;user=root;password=12345", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.0.42-mysql"));
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder

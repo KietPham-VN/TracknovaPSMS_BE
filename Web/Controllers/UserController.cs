@@ -47,4 +47,10 @@ public class UserController(IUserService userService) : ControllerBase
             userId
         });
     }
+
+    [HttpGet("test-exception")]
+    public IActionResult ThrowTest()
+    {
+        throw new Exception("This is a test error");
+    }
 }

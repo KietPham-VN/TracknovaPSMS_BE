@@ -6,22 +6,50 @@ using Application.Repositories.Interfaces;
 using Application.Services.Implementations;
 using Application.Services.Interfaces;
 using Domain.Abstractions;
+using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infrastructures.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Web.ActionFilters;
 using Web.Middlewares;
 
+// 👇 Load environment variables from .env
+Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ✅ Load .env variables safely
+var dbConnection = Environment.GetEnvironmentVariable("DB_CONNECTION")
+    ?? throw new InvalidOperationException("DB_CONNECTION is missing from .env");
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
+    ?? throw new InvalidOperationException("JWT_KEY is missing from .env");
+
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? "tracknova";
+
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? "tracknova_users";
+
+// ✅ Register DbContext using connection string from .env
+builder.Services.AddDbContext<IApplicationDbContext, TracknovaContext>(options =>
+    options.UseMySql(dbConnection, ServerVersion.Parse("8.0.42-mysql")));
+
+// ✅ Add services & DI
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IJwtHelper, JwtHelper>();
+
+// ✅ Add FluentValidation
+builder.Services
+    .AddFluentValidationAutoValidation()
+    .AddValidatorsFromAssemblyContaining<UserRegisterRequestValidator>();
+
+// ✅ Add authentication (JWT)
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -29,31 +57,23 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    var config = builder.Configuration.GetSection("JwtSettings");
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = config["Issuer"],
-        ValidAudience = config["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Key"]))
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IJwtHelper, JwtHelper>();
-builder.Services.AddDbContext<IApplicationDbContext, TracknovaContext>();
 
-builder.Services
-    .AddFluentValidationAutoValidation()
-    .AddValidatorsFromAssemblyContaining<UserRegisterRequestValidator>();
+// ✅ Add Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Web", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Tracknova API", Version = "v1" });
 
-    // Add JWT authentication
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -80,21 +100,23 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var app = builder.Build();
+builder.Services.AddControllers();
 
-// Configure the HTTP request pipeline.
+var app = builder.Build();
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
+// ✅ Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseMiddleware<GlobalExceptionMiddleware>();
+
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-await app.RunAsync().ConfigureAwait(false);
+await app.RunAsync();
