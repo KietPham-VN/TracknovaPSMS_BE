@@ -2,7 +2,11 @@
 
 public interface IUserRepository
 {
-    Task<User?> GetByUsernameAsync(string phoneNumber);
+    public Task<User?> GetByPhoneNumberAsync(string phoneNumber);
 
-    Task<int> AddUserAsync(User user);
+    public Task<int> AddUserAsync(User user);
+
+    public Task UpdateUserAsync(User user);
+
+    public Task<User?> GetByRefreshTokenAsync(string refreshToken);
 }

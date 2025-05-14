@@ -4,10 +4,13 @@ using Application.Repositories.Interfaces;
 using Application.Services.Implementations;
 using Application.Services.Interfaces;
 using Domain.Abstractions;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Infrastructures.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-
+using Web.ActionFilters;
+using Web.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,8 +42,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddDbContext<IApplicationDbContext, TracknovaContext>();
 builder.Services.AddSwaggerGen();
-
-
+builder.Services
+    .AddFluentValidationAutoValidation()
+    .AddValidatorsFromAssemblyContaining<UserRegisterRequestValidator>();
 
 var app = builder.Build();
 
@@ -50,13 +54,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-
 app.MapControllers();
 
 app.Run();
-

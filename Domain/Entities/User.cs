@@ -1,4 +1,6 @@
-﻿namespace Domain.Entities;
+﻿using Domain.Enums;
+
+namespace Domain.Entities;
 
 public class User
 {
@@ -16,13 +18,15 @@ public class User
 
     public DateOnly? DateOfBirth { get; set; }
 
-    public string? Role { get; set; }
+    public UserRole Role { get; set; } = UserRole.User;
 
-    public ushort? PrioritizeScore { get; set; }
+    public UserStatus Status { get; set; } = UserStatus.Activated;
 
-    public string? Status { get; set; }
+    public ushort? PrioritizeScore { get; set; } = 0;
+
     public string? RefreshToken { get; set; }
+
     public DateTime? RefreshTokenExpiration { get; set; }
 
-    public virtual ICollection<Order> Orders { get; set; } = [];
+    public ICollection<Order> Orders { get; set; } = [];
 }
