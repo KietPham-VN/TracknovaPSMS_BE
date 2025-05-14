@@ -37,7 +37,7 @@ public class UserService(IUserRepository userRepo, IJwtHelper jwtHelper) : IUser
 
     public async Task<UserLoginResponse> LoginAsync(UserLoginRequest request)
     {
-        var user = await userRepo.GetByPhoneNumberAsync(request.PhoneNumber)
+        var user = await userRepo.GetByPhoneNumberAsync(request.PhoneNumber).ConfigureAwait(false)
             ?? throw new Exception("Invalid credentials");
 
         if (!PasswordHasher.Verify(request.Password, user.Password))
@@ -49,12 +49,35 @@ public class UserService(IUserRepository userRepo, IJwtHelper jwtHelper) : IUser
         user.RefreshToken = refreshToken;
         user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
 
-        await userRepo.UpdateUserAsync(user);
+        await userRepo.UpdateUserAsync(user).ConfigureAwait(false);
 
         return new UserLoginResponse
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(60)
+        };
+    }
+
+    public async Task<UserLoginResponse> RefreshTokenAsync(RefreshTokenRequest request)
+    {
+        var user = await userRepo.GetByRefreshTokenAsync(request.RefreshToken).ConfigureAwait(false)
+                   ?? throw new Exception("Invalid refresh token");
+
+        if (user.RefreshTokenExpiration < DateTime.UtcNow)
+            throw new Exception("Refresh token expired");
+
+        var newAccessToken = jwtHelper.GenerateAccessToken(user);
+        var newRefreshToken = jwtHelper.GenerateRefreshToken();
+
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+        await userRepo.UpdateUserAsync(user).ConfigureAwait(false);
+
+        return new UserLoginResponse
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken,
             AccessTokenExpiration = DateTime.UtcNow.AddMinutes(60)
         };
     }

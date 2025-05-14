@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Application.Helpers.Implementations;
 using Application.Helpers.Interfaces;
 using Application.Repositories.Implementations;
@@ -11,6 +11,7 @@ using FluentValidation.AspNetCore;
 using Infrastructures.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Web.ActionFilters;
 using Web.Middlewares;
 
@@ -44,10 +45,40 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtHelper, JwtHelper>();
 builder.Services.AddDbContext<IApplicationDbContext, TracknovaContext>();
-builder.Services.AddSwaggerGen();
+
 builder.Services
     .AddFluentValidationAutoValidation()
     .AddValidatorsFromAssemblyContaining<UserRegisterRequestValidator>();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Web", Version = "v1" });
+
+    // Add JWT authentication
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Nhập token theo dạng: Bearer {your token}"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -61,8 +92,9 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync().ConfigureAwait(false);

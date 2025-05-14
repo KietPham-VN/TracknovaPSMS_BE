@@ -2,15 +2,11 @@
 
 namespace Web.Middlewares;
 
-public class GlobalExceptionMiddleware
+public class GlobalExceptionMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public GlobalExceptionMiddleware(RequestDelegate next) => _next = next;
-
-    public async Task Invoke(HttpContext context)
+    public async Task InvokeAsync(HttpContext context)
     {
-        try { await _next(context); }
+        try { await next(context).ConfigureAwait(false); }
         catch (Exception ex)
         {
             context.Response.StatusCode = 500;
@@ -19,7 +15,7 @@ public class GlobalExceptionMiddleware
             {
                 error = "Something went wrong",
                 detail = ex.Message
-            }));
+            })).ConfigureAwait(false);
         }
     }
 }
