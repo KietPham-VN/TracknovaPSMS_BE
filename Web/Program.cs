@@ -1,4 +1,6 @@
 using System.Text;
+using Application.Helpers.Implementations;
+using Application.Helpers.Interfaces;
 using Application.Repositories.Implementations;
 using Application.Repositories.Interfaces;
 using Application.Services.Implementations;
@@ -40,6 +42,7 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IJwtHelper, JwtHelper>();
 builder.Services.AddDbContext<IApplicationDbContext, TracknovaContext>();
 builder.Services.AddSwaggerGen();
 builder.Services

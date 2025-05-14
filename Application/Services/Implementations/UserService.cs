@@ -1,12 +1,14 @@
 ﻿using Application.DTOs.UserDTO.Requests;
+using Application.DTOs.UserDTO.Response;
 using Application.Helpers;
+using Application.Helpers.Interfaces;
 using Application.Repositories.Interfaces;
 using Application.Services.Interfaces;
 using Domain.Enums;
 
 namespace Application.Services.Implementations;
 
-public class UserService(IUserRepository userRepo) : IUserService
+public class UserService(IUserRepository userRepo, IJwtHelper jwtHelper) : IUserService
 {
     public async Task<int> RegisterAsync(UserRegisterRequest request)
     {
@@ -31,5 +33,29 @@ public class UserService(IUserRepository userRepo) : IUserService
         };
 
         return await userRepo.AddUserAsync(user).ConfigureAwait(false);
+    }
+
+    public async Task<UserLoginResponse> LoginAsync(UserLoginRequest request)
+    {
+        var user = await userRepo.GetByPhoneNumberAsync(request.PhoneNumber)
+            ?? throw new Exception("Invalid credentials");
+
+        if (!PasswordHasher.Verify(request.Password, user.Password))
+            throw new Exception("Invalid credentials");
+
+        var accessToken = jwtHelper.GenerateAccessToken(user);
+        var refreshToken = jwtHelper.GenerateRefreshToken();
+
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+
+        await userRepo.UpdateUserAsync(user);
+
+        return new UserLoginResponse
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(60)
+        };
     }
 }

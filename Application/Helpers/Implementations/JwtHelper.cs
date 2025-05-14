@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Application.Helpers.Implementations;
+
 public class JwtHelper(IConfiguration config) : IJwtHelper
 {
     public string GenerateAccessToken(User user)
@@ -14,14 +15,14 @@ public class JwtHelper(IConfiguration config) : IJwtHelper
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-            new Claim(JwtRegisteredClaimNames.PhoneNumber, user.PhoneNumber),
+            new Claim("phone", user.PhoneNumber ?? ""),
+            new Claim("role", user.Role.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JwtSettings:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JwtSettings:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(config["JwtSettings:ExpiresInMinutes"]));
+        var expires = DateTime.UtcNow.AddMinutes(double.Parse(config["JwtSettings:ExpiresInMinutes"]!));
 
         var token = new JwtSecurityToken(
             issuer: config["JwtSettings:Issuer"],
@@ -34,7 +35,7 @@ public class JwtHelper(IConfiguration config) : IJwtHelper
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public static string GenerateRefreshToken()
+    public string GenerateRefreshToken()
     {
         return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     }

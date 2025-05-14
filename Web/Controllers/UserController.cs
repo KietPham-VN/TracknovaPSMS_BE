@@ -14,7 +14,14 @@ public class UserController(IUserService userService) : ControllerBase
         return Ok(new
         {
             message = "User registered successfully",
-            userId = userId
+            userId
         });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> LoginAsync([FromBody] UserLoginRequest request)
+    {
+        var result = await userService.LoginAsync(request);
+        return Ok(result);
     }
 }
