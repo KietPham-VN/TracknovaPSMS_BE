@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Application.DTOs;
-using Domain.Entities;
+﻿using Domain.Entities;
 
 namespace Application.Repositories
 {
@@ -12,8 +6,13 @@ namespace Application.Repositories
     {
         Task<IEnumerable<Customer>> GetAll();
         Task<Customer> GetById(int id);
-        Task<Customer> Add(Customer customer);
-        Task Update(Customer customer);
-        Task Delete(int id);
+        Task<Customer> GetByUsername(string username);
+        Task<Customer> GetByEmail(string email);
+        Task<bool> Create(Customer customer);
+        Task<bool> Update(Customer customer);
+        Task<bool> Delete(int id);
+        Task<bool> Exists(int id);
+        Task<bool> UsernameExists(string username);
+        Task<bool> EmailExists(string email);
     }
 }

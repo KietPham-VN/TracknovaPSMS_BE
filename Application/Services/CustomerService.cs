@@ -1,75 +1,117 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Application.DTOs;
+﻿using Application.DTOs;
 using Application.Repositories;
 using Domain.Entities;
+using Domain.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Application.Services
 {
-    internal class CustomerService : ICustomerService
+    public class CustomerService : ICustomerService
     {
         private readonly ICustomerRepository _customerRepository;
+
         public CustomerService(ICustomerRepository customerRepository)
         {
             _customerRepository = customerRepository;
         }
 
-        public async Task<CustomerDto> CreateCustomer(CustomerDto customerDto)
-        {
-            var customer  = new Customer 
-            {
-                UserName = customerDto.UserName,
-                PhoneNumber = customerDto.PhoneNumber
-            };
-            var result = await _customerRepository.Add(customer);
-            customerDto.CustomerId = result.customerId;
-            customerDto.UserName = result.UserName;
-            customerDto.PhoneNumber = result.PhoneNumber;
-            return customerDto;
-        }
-
-        public Task DeleteCustomer(int id)
-        {
-            return _customerRepository.Delete(id);
-        }
-
         public async Task<IEnumerable<CustomerDto>> GetAllCustomers()
         {
             var customers = await _customerRepository.GetAll();
-            return customers.Select(c => new CustomerDto
-            {
-                CustomerId = c.customerId,
-                UserName = c.UserName,
-                PhoneNumber = c.PhoneNumber
-            });
+            return customers.Select(MapToDto);
         }
 
-        public async Task<CustomerDto?> GetCustomerById(int id)
+        public async Task<CustomerDto> GetCustomerById(int id)
+        {
+            var customer = await _customerRepository.GetById(id);
+            return customer != null ? MapToDto(customer) : null;
+        }
+
+        public async Task<CustomerDto> GetCustomerByUsername(string username)
+        {
+            var customer = await _customerRepository.GetByUsername(username);
+            return customer != null ? MapToDto(customer) : null;
+        }
+
+        public async Task<CustomerDto> GetCustomerByEmail(string email)
+        {
+            var customer = await _customerRepository.GetByEmail(email);
+            return customer != null ? MapToDto(customer) : null;
+        }
+
+        public async Task<bool> CreateCustomer(CustomerCreateDto customerDto)
+        {
+            // Kiểm tra username và email đã tồn tại chưa
+            if (await _customerRepository.UsernameExists(customerDto.UserName))
+                throw new Exception("Username đã tồn tại");
+
+            if (await _customerRepository.EmailExists(customerDto.Email))
+                throw new Exception("Email đã tồn tại");
+
+            var customer = new Customer
+            {
+                UserName = customerDto.UserName,
+                FullName = customerDto.FullName,
+                Password = customerDto.Password, // need hashpass
+                PhoneNumber = customerDto.PhoneNumber,
+                Email = customerDto.Email,
+                Address = customerDto.Address,
+                DateOfBirth = customerDto.DateOfBirth,
+                Role = customerDto.Role,
+                PrioritizeScore = 0, 
+                Status = UserStatus.Actived
+            };
+
+            return await _customerRepository.Create(customer);
+        }
+
+        public async Task<bool> UpdateCustomer(int id, CustomerUpdateDto customerDto)
         {
             var customer = await _customerRepository.GetById(id);
             if (customer == null)
-            {
-                return null;
-            }
+                return false;
+
+            // Cập nhật thông tin
+            customer.FullName = customerDto.FullName;
+            customer.PhoneNumber = customerDto.PhoneNumber;
+            customer.Email = customerDto.Email;
+            customer.Address = customerDto.Address;
+            customer.DateOfBirth = customerDto.DateOfBirth;
+            customer.Role = customerDto.Role;
+            customer.PrioritizeScore = customerDto.PrioritizeScore;
+            customer.Status = customerDto.Status;
+
+            return await _customerRepository.Update(customer);
+        }
+
+        public async Task<bool> DeleteCustomer(int id)
+        {
+            return await _customerRepository.Delete(id);
+        }
+
+        public async Task<bool> CustomerExists(int id)
+        {
+            return await _customerRepository.Exists(id);
+        }
+
+        private CustomerDto MapToDto(Customer customer)
+        {
             return new CustomerDto
             {
                 CustomerId = customer.customerId,
                 UserName = customer.UserName,
-                PhoneNumber = customer.PhoneNumber
+                FullName = customer.FullName,
+                PhoneNumber = customer.PhoneNumber,
+                Email = customer.Email,
+                Address = customer.Address,
+                DateOfBirth = customer.DateOfBirth,
+                Role = customer.Role,
+                PrioritizeScore = customer.PrioritizeScore,
+                Status = customer.Status
             };
-        }
-
-        public async Task UpdateCustomer(CustomerDto customerDto)
-        {
-            var customer = await _customerRepository.GetById(customerDto.CustomerId);
-            if (customer == null)
-                return;
-            customer.UserName = customerDto.UserName;
-            customer.PhoneNumber = customerDto.PhoneNumber;
-            await _customerRepository.Update(customer);
         }
     }
 }

@@ -1,58 +1,70 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Domain.Entities;
-using Domain.Enums;
+﻿using Domain.Entities;
 
 namespace Application.Repositories
 {
     public class CustomerRepository : ICustomerRepository
     {
-        private readonly AppContext _context;
-        public CustomerRepository(AppContext context)
+        private readonly AppDbContext _context;
+
+        public CustomerRepository(AppDbContext context)
         {
             _context = context;
         }
-        public Task<Customer> Add(Customer customer)
+
+        public async Task<IEnumerable<Customer>> GetAll()
         {
-            // Simulate adding a customer to the database
-            customer.customerId = new Random().Next(1, 1000); // Simulate auto-increment ID
-            return Task.FromResult(customer);
+            return await _context.Customers.ToList();
         }
 
-        public Task Delete(int id)
+        public async Task<Customer> GetById(int id)
         {
-            throw new NotImplementedException();
+            return await _context.Customers.FindAsync(id);
         }
 
-        public Task<IEnumerable<Customer>> GetAll()
+        public async Task<Customer> GetByUsername(string username)
         {
-            var customers = new List<Customer>
-            {
-                new Customer { customerId = 1, UserName = "john_doe", FullName = "John Doe", Email = "john@example.com", Status = UserStatus.Actived },
-                new Customer { customerId = 2, UserName = "jane_doe", FullName = "Jane Doe", Email = "jane@example.com", Status = UserStatus.Inactived }
-            };
-            return Task.FromResult(customers.AsEnumerable());
+            return await _context.Customers.FirstOrDefaultAsync(c => c.UserName == username);
         }
 
-        public Task<Customer> GetById(int id)
+        public async Task<Customer> GetByEmail(string email)
         {
-            var customer = new Customer
-            {
-                customerId = id,
-                UserName = "john_doe",
-                FullName = "John Doe",
-                Email = "john@example.com",
-                Status = UserStatus.Actived
-            };
-            return Task.FromResult(customer);
+            return await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);
         }
 
-        public Task Update(Customer customer)
+        public async Task<bool> Create(Customer customer)
         {
-            return Task.CompletedTask;
+            await _context.Customers.Add(customer);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> Update(Customer customer)
+        {
+            _context.Customers.Update(customer);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> Delete(int id)
+        {
+            var customer = await GetById(id);
+            if (customer == null) return false;
+            
+            _context.Customers.Remove(customer);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> Exists(int id)
+        {
+            return await _context.Customers.AnyAsync(c => c.customerId == id);
+        }
+
+        public async Task<bool> UsernameExists(string username)
+        {
+            return await _context.Customers.AnyAsync(c => c.UserName == username);
+        }
+
+        public async Task<bool> EmailExists(string email)
+        {
+            return await _context.Customers.AnyAsync(c => c.Email == email);
         }
     }
 }
